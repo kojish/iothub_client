@@ -15,7 +15,7 @@ You will need to set-up Azure IoT Hub C SDK in your development environment befo
 * TBD. Tested with macOS only for now.
 
 ## How to build
-1. Download and copy this application to the sample folder in the Azure IoT Hub C SDK which is azure-iot-sdk-c/iothub_client/samples/. The directory should look like the following:
+1. Download and copy this application to the sample folder in the Azure IoT Hub C SDK which is azure-iot-sdk-c/iothub_client/samples/. The directory should look like the following:  
    azure-iot-sdk-c/iothub_client/samples/iothub_c_client
 2. Open azure-iot-sdk-c/iothub_client/samples/CMakeLists.txt. Add "add_sample_directory(iothub_c_client)" to CMakeLists.txt to be compiled.
 3. Go to azure-iot-sdk-c/cmake directory, and run "cmake --build ." to build the application. You will find the executable file under azure-iot-sdk-c/cmake/iothub_client/samples/iothub_c_client directory. The file name is iothub_c_client.
