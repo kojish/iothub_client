@@ -7,9 +7,13 @@
 /* Paste in the your iothub connection string  */
 static const char* connectionString = "HostName=iothubks.azure-devices.net;DeviceId=cmac;SharedAccessKey=ti6bdDIjsjNaMn4i263ZPKhMue7b8iCZBmxx12OfUnI=";
 
-#define MESSAGE_COUNT        5
+#define MESSAGE_COUNT        1
 static bool g_continueRunning = true;
 static size_t g_message_count_send_confirmations = 0;
+static const char* proxy_host = NULL; // "Web proxy name here"
+static int proxy_port = 0;               // Proxy port
+static const char* proxy_username = NULL; // Proxy user name
+static const char* proxy_password = NULL; // Proxy password
 
 static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void* userContextCallback)
 {
@@ -63,74 +67,69 @@ int main(void)
     (void)printf("Creating IoTHub Device handle\r\n");
     // Create the iothub handle here
     device_ll_handle = IoTHubDeviceClient_LL_CreateFromConnectionString(connectionString, protocol);
-    if (device_ll_handle == NULL)
-    {
+    if (device_ll_handle == NULL) {
         (void)printf("Failure createing Iothub device.  Hint: Check you connection string.\r\n");
+        return -1;
     }
-    else
-    {
-        // Set any option that are neccessary.
-        // For available options please see the iothub_sdk_options.md documentation
 
-        bool traceOn = true;
-        IoTHubDeviceClient_LL_SetOption(device_ll_handle, OPTION_LOG_TRACE, &traceOn);
+    // Set any option that are neccessary.
+    // For available options please see the iothub_sdk_options.md documentation
+    bool traceOn = true;
+    IoTHubDeviceClient_LL_SetOption(device_ll_handle, OPTION_LOG_TRACE, &traceOn);
+
+    // Set proxy informaiton
+    if (proxy_host) {
+      HTTP_PROXY_OPTIONS http_proxy_options = { 0 };
+      http_proxy_options.host_address = proxy_host;
+      http_proxy_options.port = proxy_port;
+      http_proxy_options.username = proxy_username;
+      http_proxy_options.password = proxy_password;
+
+      if (IoTHubDeviceClient_LL_SetOption(device_ll_handle, OPTION_HTTP_PROXY, &http_proxy_options) != IOTHUB_CLIENT_OK) {
+        (void)printf("failure to set proxy\n");
+      }
+    }
 
 #ifdef SET_TRUSTED_CERT_IN_SAMPLES
-        // Setting the Trusted Certificate.  This is only necessary on system with without
-        // built in certificate stores.
-            IoTHubDeviceClient_LL_SetOption(device_ll_handle, OPTION_TRUSTED_CERT, certificates);
+    // Setting the Trusted Certificate.  This is only necessary on system with without
+    // built in certificate stores.
+    IoTHubDeviceClient_LL_SetOption(device_ll_handle, OPTION_TRUSTED_CERT, certificates);
 #endif // SET_TRUSTED_CERT_IN_SAMPLES
 
 #if defined SAMPLE_MQTT || defined SAMPLE_MQTT_WS
-        //Setting the auto URL Encoder (recommended for MQTT). Please use this option unless
-        //you are URL Encoding inputs yourself.
-        //ONLY valid for use with MQTT
-        //bool urlEncodeOn = true;
-        //IoTHubDeviceClient_LL_SetOption(iothub_ll_handle, OPTION_AUTO_URL_ENCODE_DECODE, &urlEncodeOn);
+    //Setting the auto URL Encoder (recommended for MQTT). Please use this option unless
+    //you are URL Encoding inputs yourself.
+    //ONLY valid for use with MQTT
+    //bool urlEncodeOn = true;
+    //IoTHubDeviceClient_LL_SetOption(iothub_ll_handle, OPTION_AUTO_URL_ENCODE_DECODE, &urlEncodeOn);
 #endif
 
-        // Setting connection status callback to get indication of connection to iothub
-        (void)IoTHubDeviceClient_LL_SetConnectionStatusCallback(device_ll_handle, connection_status_callback, NULL);
+    // Setting connection status callback to get indication of connection to iothub
+    (void)IoTHubDeviceClient_LL_SetConnectionStatusCallback(device_ll_handle, connection_status_callback, NULL);
 
-        do
+    while (g_continueRunning) {
+        // Construct the iothub message from a string or a byte array
+        message_handle = IoTHubMessage_CreateFromString(telemetry_msg);
+
+        (void)printf("Sending message %d to IoTHub\r\n", (int)(messages_sent + 1));
+        IoTHubDeviceClient_LL_SendEventAsync(device_ll_handle, message_handle, send_confirm_callback, NULL);
+
+        // The message is copied to the sdk so the we can destroy it
+        IoTHubMessage_Destroy(message_handle);
+
+        messages_sent++;
+
+        if (g_message_count_send_confirmations >= MESSAGE_COUNT)
         {
-            if (messages_sent < MESSAGE_COUNT)
-            {
-                // Construct the iothub message from a string or a byte array
-                message_handle = IoTHubMessage_CreateFromString(telemetry_msg);
-                //message_handle = IoTHubMessage_CreateFromByteArray((const unsigned char*)msgText, strlen(msgText)));
+            g_continueRunning = false;
+        }
 
-                // Set Message property
-                /*(void)IoTHubMessage_SetMessageId(message_handle, "MSG_ID");
-                (void)IoTHubMessage_SetCorrelationId(message_handle, "CORE_ID");
-                (void)IoTHubMessage_SetContentTypeSystemProperty(message_handle, "application%2fjson");
-                (void)IoTHubMessage_SetContentEncodingSystemProperty(message_handle, "utf-8");*/
-
-                // Add custom properties to message
-                (void)IoTHubMessage_SetProperty(message_handle, "property_key", "property_value");
-
-                (void)printf("Sending message %d to IoTHub\r\n", (int)(messages_sent + 1));
-                IoTHubDeviceClient_LL_SendEventAsync(device_ll_handle, message_handle, send_confirm_callback, NULL);
-
-                // The message is copied to the sdk so the we can destroy it
-                IoTHubMessage_Destroy(message_handle);
-
-                messages_sent++;
-            }
-            else if (g_message_count_send_confirmations >= MESSAGE_COUNT)
-            {
-                // After all messages are all received stop running
-                g_continueRunning = false;
-            }
-
-            IoTHubDeviceClient_LL_DoWork(device_ll_handle);
-            ThreadAPI_Sleep(1);
-
-        } while (g_continueRunning);
-
-        // Clean up the iothub sdk handle
-        IoTHubDeviceClient_LL_Destroy(device_ll_handle);
+        IoTHubDeviceClient_LL_DoWork(device_ll_handle);
+        ThreadAPI_Sleep(500);
     }
+
+    // Clean up the iothub sdk handle
+    IoTHubDeviceClient_LL_Destroy(device_ll_handle);
     // Free all the sdk subsystem
     IoTHub_Deinit();
 
