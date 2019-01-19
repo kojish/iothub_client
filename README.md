@@ -12,7 +12,7 @@ This is a client application for Azure IoT Hub. The application uses the lower l
 You will need to set-up Azure IoT Hub C SDK in your development environment before compiling the application. See Microsoft's relevant web site to install and configure to make it work.
 
 ## Dependency
-* TBD. Run on macOS only/Ubuntu for now.
+* TBD. Run on macOS/Ubuntu for now.
 
 ## How to build
 1. Go to azure-iot-sdk-c/iothub_client/samples, and run the following:  
