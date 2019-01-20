@@ -25,26 +25,26 @@ extern "C" {
 #endif // SET_TRUSTED_CERT_IN_SAMPLES
 
 // The protocol you wish to use should be uncommented
-#define SAMPLE_MQTT
-//#define SAMPLE_MQTT_OVER_WEBSOCKETS
-//#define SAMPLE_AMQP
-//#define SAMPLE_AMQP_OVER_WEBSOCKETS
-//#define SAMPLE_HTTP
-#ifdef SAMPLE_MQTT
+#define USE_PROTOCOL_MQTT
+//#define USE_PROTOCOL_MQTT_OVER_WEBSOCKETS
+//#define USE_PROTOCOL_AMQP
+//#define USE_PROTOCOL_AMQP_OVER_WEBSOCKETS
+//#define USE_PROTOCOL_HTTP
+#ifdef USE_PROTOCOL_MQTT
     #include "iothubtransportmqtt.h"
-#endif // SAMPLE_MQTT
-#ifdef SAMPLE_MQTT_OVER_WEBSOCKETS
+#endif // USE_PROTOCOL_MQTT
+#ifdef USE_PROTOCOL_MQTT_OVER_WEBSOCKETS
     #include "iothubtransportmqtt_websockets.h"
-#endif // SAMPLE_MQTT_OVER_WEBSOCKETS
-#ifdef SAMPLE_AMQP
+#endif // USE_PROTOCOL_MQTT_OVER_WEBSOCKETS
+#ifdef USE_PROTOCOL_AMQP
     #include "iothubtransportamqp.h"
-#endif // SAMPLE_AMQP
-#ifdef SAMPLE_AMQP_OVER_WEBSOCKETS
+#endif // USE_PROTOCOL_AMQP
+#ifdef USE_PROTOCOL_AMQP_OVER_WEBSOCKETS
     #include "iothubtransportamqp_websockets.h"
-#endif // SAMPLE_AMQP_OVER_WEBSOCKETS
-#ifdef SAMPLE_HTTP
+#endif // USE_PROTOCOL_AMQP_OVER_WEBSOCKETS
+#ifdef USE_PROTOCOL_HTTP
     #include "iothubtransporthttp.h"
-#endif // SAMPLE_HTTP
+#endif // USE_PROTOCOL_HTTP
 
 #ifdef SET_TRUSTED_CERT_IN_SAMPLES
 #include "certs.h"
