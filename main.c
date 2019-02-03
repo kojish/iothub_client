@@ -83,9 +83,10 @@ static IOTHUBMESSAGE_DISPOSITION_RESULT c2d_message(IOTHUB_MESSAGE_HANDLE messag
 
     return IOTHUBMESSAGE_ACCEPTED;
 }
+
 static int device_method(const char* method_name, const unsigned char* payload, size_t size, unsigned char** response, size_t* resp_size, void* userContextCallback)
 {
-    const char* SetTelemetryIntervalMethod = "SetTelemetryInterval";
+    const char* SetTelemetryIntervalMethod = "SetInterval";
     const char* device_id = (const char*)userContextCallback;
     char* end = NULL;
     int newInterval;
@@ -134,6 +135,7 @@ static int device_method(const char* method_name, const unsigned char* payload, 
     
     return status;
 }
+
 /*
  * This is called if the device method is invoked.
  */
@@ -206,6 +208,7 @@ int main(int argc, char **argv) {
     IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol;
     IOTHUB_MESSAGE_HANDLE message_handle;
     size_t messages_sent = 0;
+    char deviceId[8] = "cmac";
     int pressure;
     int rotation;
     int level;
@@ -286,7 +289,7 @@ int main(int argc, char **argv) {
       return -1;
     }
     // Setting device method callback
-    if(IoTHubDeviceClient_LL_SetDeviceMethodCallback(dev_handle, device_method, NULL) != IOTHUB_CLIENT_OK) {
+    if(IoTHubDeviceClient_LL_SetDeviceMethodCallback(dev_handle, device_method1, NULL) != IOTHUB_CLIENT_OK) {
       (void)printf("Failed to set device method callback\n");
       return -1;
     }
@@ -309,9 +312,9 @@ int main(int argc, char **argv) {
       timer = time(NULL);
       local = localtime(&timer);
       memset(evtime, 0, sizeof(evtime));
-      sprintf(evtime, "%4d-%02d-%02dT %02d:%02d:%02dZ", local->tm_year + 1900, local->tm_mon+1, local->tm_mday, local->tm_hour, local->tm_min, local->tm_sec);
+      sprintf(evtime, "%4d-%02d-%02d %02d:%02d:%02d", local->tm_year + 1900, local->tm_mon+1, local->tm_mday, local->tm_hour, local->tm_min, local->tm_sec);
       memset(msg_buf, 0, sizeof(msg_buf));
-      sprintf(msg_buf, "{\"pressure\":%d,\"rotation\":%d,\"level\":%d,\"event_time\":\"%s\"}", pressure, rotation, level, evtime);
+      sprintf(msg_buf, "{\"deviceId\":\"%s\",\"pressure\":%d,\"rotation\":%d,\"level\":%d,\"event_time\":\"%s\"}", deviceId, pressure, rotation, level, evtime);
 
       message_handle = IoTHubMessage_CreateFromString(msg_buf);
       if(message_handle == NULL) {
