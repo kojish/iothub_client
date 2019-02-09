@@ -5,7 +5,12 @@
 #include <time.h>
 
 /* Paste in the your iothub connection string  */
-static const char* connectionString = "HostName=iothubks.azure-devices.net;DeviceId=cmac;SharedAccessKey=ti6bdDIjsjNaMn4i263ZPKhMue7b8iCZBmxx12OfUnI=";
+//static const char* connectionString = "HostName=iothubks.azure-devices.net;DeviceId=cmac;SharedAccessKey=ti6bdDIjsjNaMn4i263ZPKhMue7b8iCZBmxx12OfUnI=";
+
+static const char* connectionString = "HostName=iothubks.azure-devices.net;DeviceId=c_client;SharedAccessKey=o1Yl0B/KmICoxSWEdqc2RAvLLspCDoJN4XSdCN8oKs8=;GatewayHostName=dsvm";
+
+// Path to the Edge "owner" root CA certificate
+static const char* edge_ca_cert_path = "/home/kshimizu/proj/azure-iot-sdk-c/workdir/certs/azure-iot-test-only.root.ca.cert.pem";
 
 #define MESSAGE_COUNT        1
 static bool g_continueRunning = true;
@@ -200,6 +205,59 @@ printf("JSON: %s\n", payLoad);
 
 }
 
+/**
+    Read the certificate file and provide a null terminated string
+    containing the certificate.
+*/
+static char *obtain_edge_ca_certificate(void)
+{
+    char *result = NULL;
+    FILE *ca_file;
+
+    ca_file = fopen(edge_ca_cert_path, "r");
+    if (ca_file == NULL)
+    {
+        printf("Error could not open file for reading %s\r\n", edge_ca_cert_path);
+    }
+    else
+    {
+        size_t file_size;
+
+        (void)fseek(ca_file, 0, SEEK_END);
+        file_size = ftell(ca_file);
+        (void)fseek(ca_file, 0, SEEK_SET);
+        // increment size to hold the null term
+        file_size += 1;
+
+        if (file_size == 0) // check wrap around
+        {
+            printf("File size invalid for %s\r\n", edge_ca_cert_path);
+        }
+        else
+        {
+            result = (char*)calloc(file_size, 1);
+            if (result == NULL)
+            {
+                printf("Could not allocate memory to hold the certificate\r\n");
+            }
+            else
+            {
+                // copy the file into the buffer
+                size_t read_size = fread(result, 1, file_size - 1, ca_file);
+                if (read_size != file_size - 1)
+                {
+                    printf("Error reading file %s\r\n", edge_ca_cert_path);
+                    free(result);
+                    result = NULL;
+                }
+            }
+        }
+        (void)fclose(ca_file);
+    }
+
+    return result;
+}
+
 /*
  * main function. No argument is needed.
  */
@@ -217,6 +275,7 @@ int main(int argc, char **argv) {
     struct tm *local;
     char evtime[64];
     char reported_prop[128];
+    char *cert_str = NULL;
 
     // Select the Protocol to use with the connection
 #ifdef USE_PROTOCOL_MQTT
@@ -266,6 +325,9 @@ int main(int argc, char **argv) {
       }
     }
 
+    cert_str = obtain_edge_ca_certificate();
+    IoTHubDeviceClient_LL_SetOption(dev_handle, OPTION_TRUSTED_CERT, cert_str);
+
 #ifdef SET_TRUSTED_CERT_IN_SAMPLES
     // Setting the Trusted Certificate.
     IoTHubDeviceClient_LL_SetOption(dev_handle, OPTION_TRUSTED_CERT, certificates);
@@ -289,7 +351,7 @@ int main(int argc, char **argv) {
       return -1;
     }
     // Setting device method callback
-    if(IoTHubDeviceClient_LL_SetDeviceMethodCallback(dev_handle, device_method1, NULL) != IOTHUB_CLIENT_OK) {
+    if(IoTHubDeviceClient_LL_SetDeviceMethodCallback(dev_handle, device_method, NULL) != IOTHUB_CLIENT_OK) {
       (void)printf("Failed to set device method callback\n");
       return -1;
     }
