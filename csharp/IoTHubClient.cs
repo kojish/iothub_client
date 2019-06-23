@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using System.Threading;
 using Microsoft.Azure.Devices.Client;
@@ -15,14 +15,15 @@ namespace IoTHubClient
         static string deviceId = "CSharpDevice";    // デバイス名
         static DeviceClient deviceClient;
         // 接続文字列
-        static string connectionString = "HostName=iothubks.azure-devices.net;DeviceId=CSharpDevice;SharedAccessKey=Z/Gt4jIsmXtQk28q5KZ7IIsyiGTX3qk6uAZzsIpeQXU=";
+        static string connectionString = "HostName=iothubkssea.azure-devices.net;DeviceId=mypc;SharedAccessKey=fuPvLGhf0kxzK/woYCCZEOkKXy57bdS0Y6OW9kJVmoU=";
 
         static void Main(string[] args)
         {
             deviceClient = DeviceClient.CreateFromConnectionString(connectionString,
                                                                    Microsoft.Azure.Devices.Client.TransportType.Mqtt);
             deviceClient.SetConnectionStatusChangesHandler(ConnectionStatusChangeHandler);
-            sendMessages();
+            //sendMessages();
+            sendData();
             receiveCloud2DeviceMessage();
             remoteMethod();
             deviceTwin();
@@ -37,6 +38,39 @@ namespace IoTHubClient
             Console.WriteLine("Connection Status Changed Reason is {0}", reason);
             Console.WriteLine();
 
+        }
+
+        // CSVファイルを読み込み、IoT Hub へデータを送信する処理
+        private static async void sendData()
+        {
+            string localFile = @"C:\tmp\TEST_CSV.CSV"; // 対象ファイル
+            StreamReader reader = new StreamReader(localFile);
+
+            while (!reader.EndOfStream)
+            {
+                string line = reader.ReadLine();
+                string[] values = line.Split(',');
+                var telemetryDataPoint = new
+                {
+                    seihin_no1 = values[0],
+                    seihin_no2 = int.Parse(values[1]),
+                    seihin_no3 = int.Parse(values[2]),
+                    tokuisaki_buban = values[3],
+                    hinmei = values[4],
+                    rl_kubun = values[5],
+                    color = values[6],
+                    kubun = values[7],
+                    yearmonth = values[8],
+                    val = int.Parse(values[9])
+                };
+                var messageString = JsonConvert.SerializeObject(telemetryDataPoint);
+                var message = new Message(Encoding.UTF8.GetBytes(messageString));
+
+                await deviceClient.SendEventAsync(message);
+
+                Console.WriteLine("{0} > Sending message: {1}", DateTime.Now, messageString);
+                Thread.Sleep(3000);
+            }
         }
 
         // IoTHubへファイルをアップロードする処理
@@ -109,7 +143,7 @@ namespace IoTHubClient
                     event_time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 };
                 var messageString = JsonConvert.SerializeObject(telemetryDataPoint);
-                var message = new Microsoft.Azure.Devices.Client.Message(Encoding.ASCII.GetBytes(messageString));
+                var message = new Microsoft.Azure.Devices.Client.Message(Encoding.UTF8.GetBytes(messageString));
 
                 await deviceClient.SendEventAsync(message);
 
