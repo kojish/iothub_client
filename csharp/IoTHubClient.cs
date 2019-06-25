@@ -22,8 +22,8 @@ namespace IoTHubClient
             deviceClient = DeviceClient.CreateFromConnectionString(connectionString,
                                                                    Microsoft.Azure.Devices.Client.TransportType.Mqtt);
             deviceClient.SetConnectionStatusChangesHandler(ConnectionStatusChangeHandler);
-            //sendMessages();
-            sendData();
+            sendMessages();
+            ///sendData();
             receiveCloud2DeviceMessage();
             remoteMethod();
             deviceTwin();
@@ -40,16 +40,18 @@ namespace IoTHubClient
 
         }
 
-        // CSVファイルを読み込み、IoT Hub へデータを送信する処理
+
         private static async void sendData()
         {
             string localFile = @"C:\tmp\TEST_CSV.CSV"; // 対象ファイル
-            StreamReader reader = new StreamReader(localFile);
+            StreamReader reader = new StreamReader(localFile, System.Text.Encoding.GetEncoding("shift_jis"));
 
             while (!reader.EndOfStream)
             {
                 string line = reader.ReadLine();
                 string[] values = line.Split(',');
+                //List<string> lists = new List<string>();
+                //lists.AddRange(values);
                 var telemetryDataPoint = new
                 {
                     seihin_no1 = values[0],
