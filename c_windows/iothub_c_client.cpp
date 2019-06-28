@@ -7,7 +7,7 @@
  /* Paste in the your iothub connection string  */
  //static const char* connectionString = "HostName=iothubks.azure-devices.net;DeviceId=cmac;SharedAccessKey=ti6bdDIjsjNaMn4i263ZPKhMue7b8iCZBmxx12OfUnI=";
 
-static const char* connectionString = "HostName=iothubkssea.azure-devices.net;DeviceId=c_client;SharedAccessKey=JGNaJ+4g6a6AQZqFsbr/ZwgnDCOnjjumht23lKPptnI=";
+static const char* connectionString = "HostName=iothubkssea.azure-devices.net;DeviceId=client;SharedAccessKey=GNaJ+4g6a6AQZqFsbr/ZwgnDCOnjjumht23lKPptnI=";
 
 // Path to the Edge "owner" root CA certificate
 ///static const char* edge_ca_cert_path = "/home/kshimizu/proj/azure-iot-sdk-c/workdir/certs/azure-iot-test-only.root.ca.cert.pem";
