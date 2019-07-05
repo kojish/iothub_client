@@ -6,24 +6,50 @@ using Newtonsoft.Json;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Azure.Devices.Shared;
+using Microsoft.Azure.Devices.Client.Transport.Mqtt;
+using System.Net;
+using System.Web.Profile;
 
 namespace IoTHubClient
 {
     class IoTHubClientSample
     {
+        // HTTP proxy settings
+        static string proxyUri = "";
+        static int proxyPort = 443;
+        static string proxyUser = "";
+        static string proxyPassword = "";
         // デバイスIDとホスト名はご使用の環境に合わせて変更ください：
-        static string deviceId = "CSharpDevice";    // デバイス名
+        static string deviceId = "mypc";    // デバイス名
         static DeviceClient deviceClient;
         // 接続文字列
         static string connectionString = "HostName=iothubkssea.azure-devices.net;DeviceId=mypc;SharedAccessKey=fuPvLGhf0kxzK/woYCCZEOkKXy57bdS0Y6OW9kJVmoU=";
 
+        // Proxy settings
+        private static WebProxy getProxySettings(string proxyUri, int port, string user, string password)
+        {
+            if (proxyUri.Length < 1) return null;
+
+            var uri = new Uri(string.Format("{0}:{1}", proxyUri, port));
+            ICredentials credentials = new NetworkCredential(user, password);
+            return new WebProxy(uri, true, null, credentials);
+
+        }
+
         static void Main(string[] args)
         {
-            deviceClient = DeviceClient.CreateFromConnectionString(connectionString,
-                                                                   Microsoft.Azure.Devices.Client.TransportType.Mqtt);
+            var settings = new ITransportSettings[]
+            {
+                new MqttTransportSettings(Microsoft.Azure.Devices.Client.TransportType.Mqtt_WebSocket_Only)
+                {
+                    Proxy = getProxySettings(proxyUri, proxyPort, proxyUser, proxyPassword),
+                }
+            };
+
+            deviceClient = DeviceClient.CreateFromConnectionString(connectionString, settings);
             deviceClient.SetConnectionStatusChangesHandler(ConnectionStatusChangeHandler);
             sendMessages();
-            ///sendData();
+            //sendData();
             receiveCloud2DeviceMessage();
             remoteMethod();
             deviceTwin();
@@ -50,8 +76,7 @@ namespace IoTHubClient
             {
                 string line = reader.ReadLine();
                 string[] values = line.Split(',');
-                //List<string> lists = new List<string>();
-                //lists.AddRange(values);
+
                 var telemetryDataPoint = new
                 {
                     seihin_no1 = values[0],
