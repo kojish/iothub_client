@@ -65,8 +65,8 @@ namespace IoTHubClient
             Console.WriteLine();
 
         }
-
-
+        
+        // ローカルのCSVファイルをJSONに変換してから IoT Hub へ送信する処理
         private static async void sendData()
         {
             string localFile = @"C:\tmp\TEST_CSV.CSV"; // 対象ファイル
