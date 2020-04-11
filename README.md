@@ -9,7 +9,7 @@ This is a client application for Azure IoT Hub. The application uses the lower l
 * Leaf device of IoT Edge; Supporting downstream device
 
 ## Build Prerequisites
-You will need to build Azure IoT Hub C SDK in your development environment before compiling the application. See [Set up a Linux development environment](https://github.com/Azure/azure-iot-sdk-c/blob/master/doc/devbox_setup.md#set-up-a-linux-development-environment).
+You will need to build Azure IoT Hub C SDK in your development environment before compiling the application. See [Set up a Linux development environment](https://github.com/Azure/azure-iot-sdk-c/blob/master/doc/devbox_setup.md#set-up-a-linux-development-environment) and [Build the C SDK on Linux](https://github.com/Azure/azure-iot-sdk-c/blob/master/doc/devbox_setup.md#build-the-c-sdk-on-linux).
 
 ## Dependency
 * Ubuntu 18.04. I would recommend to build with [LTS version](https://github.com/Azure/azure-iot-sdk-c#long-term-support).
