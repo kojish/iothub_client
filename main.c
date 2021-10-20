@@ -5,12 +5,10 @@
 #include <time.h>
 
 /* Paste in the your iothub connection string  */
-//static const char* connectionString = "HostName=iothubks.azure-devices.net;DeviceId=cmac;SharedAccessKey=ti6bdDIjsjNaMn4i263ZPKhMue7b8iCZBmxx12OfUnI=";
-
-static const char* connectionString = "HostName=iothubks.azure-devices.net;DeviceId=c_client;SharedAccessKey=o1Yl0B/KmICoxSWEdqc2RAvLLspCDoJN4XSdCN8oKs8=;GatewayHostName=dsvm";
+static const char* connectionString = "HostName=iothubks.azure-devices.net;DeviceId=c_client;SharedAccessKey=o1Yl0B/KmICoxSWEdqc2RAvLLspCDoJN4XSdCN8oKs8=";
 
 // Path to the Edge "owner" root CA certificate
-static const char* edge_ca_cert_path = "/home/kshimizu/proj/azure-iot-sdk-c/workdir/certs/azure-iot-test-only.root.ca.cert.pem";
+static const char* edge_ca_cert_path = "/home/workdir/certs/azure-iot-test-only.root.ca.cert.pem";
 
 #define MESSAGE_COUNT        1
 static bool g_continueRunning = true;
@@ -23,26 +21,58 @@ static const char* proxy_username = NULL; // Proxy user name
 static const char* proxy_password = NULL; // Proxy password
 
 /*
- * Called to receive confirmation of the delivery of the IoT Hub message.
+ * Called to receive a delivery confirmation of the IoT Hub message.
  */
 static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void* userContextCallback) {
-    (void)userContextCallback;
-//    (void)printf("Confirmation callback received for message %lu with result %s\r\n", (unsigned long)g_message_count_send_confirmations, ENUM_TO_STRING(IOTHUB_CLIENT_CONFIRMATION_RESULT, result));
+
+    printf("Confirmation callback received for message %lu with result %s\r\n", 
+            (unsigned long)g_message_count_send_confirmations,
+            MU_ENUM_TO_STRING(IOTHUB_CLIENT_CONFIRMATION_RESULT, result));
 }
 
 /*
  * Called to receive updates of the connection to IoT Hub.
  */
 static void connection_status(IOTHUB_CLIENT_CONNECTION_STATUS result, IOTHUB_CLIENT_CONNECTION_STATUS_REASON reason, void* user_context) {
-    (void)reason;
-    (void)user_context;
+
     // This sample DOES NOT take into consideration network outages.
     if (result == IOTHUB_CLIENT_CONNECTION_AUTHENTICATED) {
-        (void)printf("The device client is connected to iothub\r\n");
+        printf("The device client is connected to iothub\r\n");
     } else {
-        (void)printf("The device client has been disconnected\r\n");
+        printf("The device client has been disconnected\r\n");
+    }
+
+    // The detail information 
+    switch(reason) {
+    case IOTHUB_CLIENT_CONNECTION_EXPIRED_SAS_TOKEN:
+        printf("SAS token expired.\n");
+        break;
+    case IOTHUB_CLIENT_CONNECTION_DEVICE_DISABLED:
+        printf("Device is disabled.\n");
+        break;
+    case IOTHUB_CLIENT_CONNECTION_BAD_CREDENTIAL:
+        printf("Bad credential.\n");
+        break;
+    case IOTHUB_CLIENT_CONNECTION_RETRY_EXPIRED: 
+        printf("Retry is expired.\n");
+        break;
+    case IOTHUB_CLIENT_CONNECTION_NO_NETWORK:
+        printf("No network connection.\n");
+        break;
+    case IOTHUB_CLIENT_CONNECTION_COMMUNICATION_ERROR: 
+        printf("Communication error occured.\n");
+        break;
+    case IOTHUB_CLIENT_CONNECTION_OK:
+        printf("Connection is successfully created with IoT Hub.\n");
+        break;
+    case IOTHUB_CLIENT_CONNECTION_NO_PING_RESPONSE:
+        printf("No ping response.\n");
+        break;
+    default:
+        break;
     }
 }
+
 
 /*
  * Called when C2D message is received from IoT Hub.
@@ -67,16 +97,16 @@ static IOTHUBMESSAGE_DISPOSITION_RESULT c2d_message(IOTHUB_MESSAGE_HANDLE messag
         size_t buff_len;
 
         if (IoTHubMessage_GetByteArray(message, &buff_msg, &buff_len) != IOTHUB_MESSAGE_OK) {
-            (void)printf("Failure retrieving byte array message\r\n");
+            printf("Failure retrieving byte array message\r\n");
         } else {
-            (void)printf("Received Binary message\r\nMessage ID: %s\r\n Correlation ID: %s\r\n Data: <<<%.*s>>> & Size=%d\r\n", messageId, correlationId, (int)buff_len, buff_msg, (int)buff_len);
+            printf("Received Binary message\r\nMessage ID: %s\r\n Correlation ID: %s\r\n Data: <<<%.*s>>> & Size=%d\r\n", messageId, correlationId, (int)buff_len, buff_msg, (int)buff_len);
         }
     } else {
         const char* string_msg = IoTHubMessage_GetString(message);
         if (string_msg == NULL) {
-            (void)printf("Failure retrieving byte array message\r\n");
+            printf("Failure retrieving byte array message\r\n");
         } else {
-            (void)printf("Received String Message\r\nMessage ID: %s\r\n Correlation ID: %s\r\n Data: <<<%s>>>\r\n", messageId, correlationId, string_msg);
+            printf("Received String Message\r\nMessage ID: %s\r\n Correlation ID: %s\r\n Data: <<<%s>>>\r\n", messageId, correlationId, string_msg);
         }
     }
     const char* property_value = "property_value";
@@ -89,77 +119,25 @@ static IOTHUBMESSAGE_DISPOSITION_RESULT c2d_message(IOTHUB_MESSAGE_HANDLE messag
     return IOTHUBMESSAGE_ACCEPTED;
 }
 
-static int device_method(const char* method_name, const unsigned char* payload, size_t size, unsigned char** response, size_t* resp_size, void* userContextCallback)
-{
-    const char* SetTelemetryIntervalMethod = "SetInterval";
-    const char* device_id = (const char*)userContextCallback;
-    char* end = NULL;
-    int newInterval;
-
-    int status = 501;
-    const char* RESPONSE_STRING = "{ \"Response\": \"Unknown method requested.\" }";
-
-    (void)printf("\r\nDevice Method called for device %s\r\n", device_id);
-    (void)printf("Device Method name:    %s\r\n", method_name);
-    (void)printf("Device Method payload: %.*s\r\n", (int)size, (const char*)payload);
-
-    if (strcmp(method_name, SetTelemetryIntervalMethod) == 0)
-    {
-        if (payload)
-        {
-            newInterval = (int)strtol((char*)payload, &end, 10);
-
-            // Interval must be greater than zero.
-            if (newInterval > 0)
-            {
-                // expect sec and covert to ms
-                g_interval = 1000 * (int)strtol((char*)payload, &end, 10);
-                status = 200;
-                RESPONSE_STRING = "{ \"Response\": \"Telemetry reporting interval updated.\" }";
-            }
-            else
-            {
-                status = 500;
-                RESPONSE_STRING = "{ \"Response\": \"Invalid telemetry reporting interval.\" }";
-            }
-        }
-    }
-
-    (void)printf("\r\nResponse status: %d\r\n", status);
-    (void)printf("Response payload: %s\r\n\r\n", RESPONSE_STRING);
-
-    *resp_size = strlen(RESPONSE_STRING);
-    if ((*response = malloc(*resp_size)) == NULL)
-    {
-        status = -1;
-    }
-    else
-    {
-        memcpy(*response, RESPONSE_STRING, *resp_size);
-    }
-    
-    return status;
-}
-
 /*
  * This is called if the device method is invoked.
+ * If you call the method from portal, set "SetInterval" for method name, and interval (msec) for payload. Note that the interval must be 1000 or greater.
  */
-static int device_method1(const char* method_name, const unsigned char* payload, size_t size, unsigned char** response, size_t* resp_size, void* userContextCallback) {
-    const char* SetTelemetryIntervalMethod = "SetTelemetryInterval";
+static int device_method(const char* method_name, const unsigned char* payload, size_t size, unsigned char** response, size_t* resp_size, void* userContextCallback) {
+    const char* method = "SetInterval";
     int newInterval = 0;
 
     int status = 501;
     const char* RESPONSE_STRING = "{ \"Response\": \"Unknown method requested.\" }";
 
-    (void)printf("Device Method name:    %s\r\n", method_name);
-    (void)printf("Device Method payload: %.*s\r\n", (int)size, (const char*)payload);
-    (void)printf("Device Method payload1: %s\r\n", (const char*)payload);
-    (void)printf("Current interval: %d, %d\r\n", g_interval, newInterval);
+    printf("Device Method name:    %s\n", method_name);
+    printf("Device Method payload: %d: %s\n", (int)size, (const char*)payload);
+    printf("Current interval: %d, New Interval: %d\n", g_interval, newInterval);
 
-    if (strcmp(method_name, SetTelemetryIntervalMethod) == 0) {
+    if (strcmp(method_name, method) == 0) {
         if (payload) {
             sscanf((const char *)payload, "%d", &newInterval);
-            printf("AAA: %d\n", newInterval);
+
             // Interval must be greater than 1000.
             if (newInterval > 999) {
                 g_interval = newInterval;
@@ -172,9 +150,9 @@ static int device_method1(const char* method_name, const unsigned char* payload,
         }
     }
 
-    (void)printf("\r\nResponse status: %d\r\n", status);
-    (void)printf("New Interval: %d\r\n", newInterval);
-    (void)printf("Response payload: %s\r\n\r\n", RESPONSE_STRING);
+    printf("\r\nResponse status: %d\r\n", status);
+    printf("New Interval: %d\r\n", newInterval);
+    printf("Response payload: %s\r\n\r\n", RESPONSE_STRING);
 
     *resp_size = strlen(RESPONSE_STRING);
     if ((*response = malloc(*resp_size)) == NULL) {
@@ -191,7 +169,7 @@ static int device_method1(const char* method_name, const unsigned char* payload,
  */
 static void reported_state(int status_code, void* userContextCallback) {
     (void)userContextCallback;
-    (void)printf("Device Twin reported properties update completed with result: %d\r\n", status_code);
+    printf("Device Twin reported properties update completed with result: %d\r\n", status_code);
 }
 
 /*
@@ -212,12 +190,12 @@ printf("JSON: %s\n", payLoad);
 static char *obtain_edge_ca_certificate(void)
 {
     char *result = NULL;
-    FILE *ca_file;
+    FILE *ca_file = NULL;
 
     ca_file = fopen(edge_ca_cert_path, "r");
     if (ca_file == NULL)
     {
-        printf("Error could not open file for reading %s\r\n", edge_ca_cert_path);
+        printf("Cert file could not open for reading %s\r\n", edge_ca_cert_path);
     }
     else
     {
@@ -259,7 +237,7 @@ static char *obtain_edge_ca_certificate(void)
 }
 
 /*
- * main function. No argument is needed.
+ * main function. No argument is needed to start.
  */
 int main(int argc, char **argv) {
 
@@ -270,14 +248,14 @@ int main(int argc, char **argv) {
     int pressure;
     int rotation;
     int level;
-    char msg_buf[128];
+    char msg_buf[256];
     time_t timer;
     struct tm *local;
     char evtime[64];
     char reported_prop[128];
     char *cert_str = NULL;
 
-    // Select the Protocol to use with the connection
+    // Select the protocol to use with the connection
 #ifdef USE_PROTOCOL_MQTT
     protocol = MQTT_Protocol;
 #endif
@@ -295,15 +273,15 @@ int main(int argc, char **argv) {
 #endif
 
     // Used to initialize IoTHub SDK subsystem
-    (void)IoTHub_Init();
+    IoTHub_Init();
 
     IOTHUB_DEVICE_CLIENT_LL_HANDLE dev_handle;
 
-    (void)printf("Creating IoTHub Device handle\r\n");
+    printf("Creating IoTHub Device handle\r\n");
     // Create the iothub handle here
     dev_handle = IoTHubDeviceClient_LL_CreateFromConnectionString(connectionString, protocol);
     if (dev_handle == NULL) {
-        (void)printf("Failure createing Iothub device.  Hint: Check you connection string.\r\n");
+        printf("Failure createing Iothub device.  Hint: Check you connection string.\r\n");
         return -1;
     }
 
@@ -321,12 +299,14 @@ int main(int argc, char **argv) {
       http_proxy_options.password = proxy_password;
 
       if (IoTHubDeviceClient_LL_SetOption(dev_handle, OPTION_HTTP_PROXY, &http_proxy_options) != IOTHUB_CLIENT_OK) {
-        (void)printf("failure to set proxy\n");
+        printf("failure to set proxy\n");
       }
     }
 
-    cert_str = obtain_edge_ca_certificate();
-    IoTHubDeviceClient_LL_SetOption(dev_handle, OPTION_TRUSTED_CERT, cert_str);
+//    cert_str = obtain_edge_ca_certificate();
+    if(cert_str != NULL) {
+        IoTHubDeviceClient_LL_SetOption(dev_handle, OPTION_TRUSTED_CERT, cert_str);
+    }
 
 #ifdef SET_TRUSTED_CERT_IN_SAMPLES
     // Setting the Trusted Certificate.
@@ -342,27 +322,27 @@ int main(int argc, char **argv) {
     
     // Setting C2D message callback to receive a message from IoT Hub.
     if(IoTHubDeviceClient_LL_SetMessageCallback(dev_handle, c2d_message, NULL) != IOTHUB_CLIENT_OK) {
-      (void)printf("Failed to set C2D message callback\n");
+      printf("Failed to set C2D message callback\n");
       return -1;
     }
     // Setting connection status callback to get indication of connection to iothub
     if(IoTHubDeviceClient_LL_SetConnectionStatusCallback(dev_handle, connection_status, NULL) != IOTHUB_CLIENT_OK) {
-      (void)printf("Failed to set connection status callback\n");
+      printf("Failed to set connection status callback\n");
       return -1;
     }
     // Setting device method callback
     if(IoTHubDeviceClient_LL_SetDeviceMethodCallback(dev_handle, device_method, NULL) != IOTHUB_CLIENT_OK) {
-      (void)printf("Failed to set device method callback\n");
+      printf("Failed to set device method callback\n");
       return -1;
     }
-    // Sending the report from device. This should be called in another place such as device_twin_callback to report the status.
+    // Sending the report from device. This should be called in another place such as device_twin_callback to report the status to device twin.
 //    if(IoTHubDeviceClient_LL_SendReportedState(dev_handle, (const unsigned char*)reported_prop, strlen(reported_prop), reported_state, NULL) != IOTHUB_CLIENT_OK) {
-//      (void)printf("Failed to set device method callback\n");
+//      printf("Failed to set device method callback\n");
 //      return -1;
 //    }
     // Setting device method callback
     if(IoTHubDeviceClient_LL_SetDeviceTwinCallback(dev_handle, device_twin_callback, NULL) != IOTHUB_CLIENT_OK) {
-      (void)printf("Failed to set device method callback\n");
+      printf("Failed to set device method callback\n");
       return -1;
     }
 
@@ -380,10 +360,10 @@ int main(int argc, char **argv) {
 
       message_handle = IoTHubMessage_CreateFromString(msg_buf);
       if(message_handle == NULL) {
-        (void)printf("Failed to create iot hub message from string\n");
+        printf("Failed to create iot hub message from string\n");
         break;
       }
-      (void)printf("Sending message [%d] %s\r\n", (int)(messages_sent + 1), msg_buf);
+      printf("Sending message [%d] %s\r\n", (int)(messages_sent + 1), msg_buf);
       IoTHubDeviceClient_LL_SendEventAsync(dev_handle, message_handle, send_confirm_callback, NULL);
       // The message is copied to the sdk so the we can destroy it
       IoTHubMessage_Destroy(message_handle);
