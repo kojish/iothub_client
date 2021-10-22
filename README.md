@@ -1,7 +1,7 @@
 # iothub_c_client
-This is a client application for Azure IoT Hub. The application uses the lower level APIs with an \_ll\_ infix that is contained in the C SDK. This is just for learning purpose or possibly to support a resource constrained device for my project in the future. The appilcation will support the following:
+This is a sample client application for Azure IoT Hub. The application uses the lower level APIs with an \_ll\_ infix that is contained in the C SDK. This is just for learning purpose or possibly to support a resource constrained device for my project in the future. The appilcation will support the following:
 * D2C and C2D message
-* Device Twin
+* Device Twin (Getting desired / Updating reported props)
 * Direct Methods
 * Upload file to Azure storage
 * Authentication: SAS key, X509
